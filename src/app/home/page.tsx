@@ -19,9 +19,9 @@ export default function HomePage() {
   const firestore = useFirestore();
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoadingNews, setIsLoadingNews] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [query, setQuery] = useState('');
-  const [pageTitle, setPageTitle] = useState('For You');
+  const [pageTitle, setPageTitle] = useState('Top Headlines');
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -30,61 +30,42 @@ export default function HomePage() {
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    // Set initial category from profile once loaded, if it hasn't been set yet.
-    if (userProfile && !isLoadingProfile && selectedCategory === null) {
-      const firstPreference = userProfile.preferences?.[0] || 'general';
-      setSelectedCategory(firstPreference);
-    }
-  }, [userProfile, isLoadingProfile, selectedCategory]);
-
-  useEffect(() => {
     const fetchNews = async () => {
-      // Don't fetch until a category is set. isLoadingProfile check is implicitly handled by selectedCategory being null until profile loads.
-      if (!selectedCategory) return;
-
       setIsLoadingNews(true);
       let newsArticles: Article[] = [];
       
-      if (selectedCategory === 'all') {
+      if (query) {
+        setPageTitle(`Results for "${query}"`);
+        newsArticles = await searchNews(query);
+      } else if (selectedCategory === 'all') {
         if (userProfile?.preferences && userProfile.preferences.length > 0) {
-            newsArticles = await getNewsForCategories(userProfile.preferences);
             setPageTitle('For You');
+            newsArticles = await getNewsForCategories(userProfile.preferences);
         } else {
-            newsArticles = await getTopHeadlines();
             setPageTitle('Top Headlines');
+            newsArticles = await getTopHeadlines();
         }
       } else {
+        setPageTitle(`${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`);
         newsArticles = await getNewsForCategories([selectedCategory]);
-        setPageTitle(`For You - ${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`);
       }
       
       setArticles(newsArticles);
       setIsLoadingNews(false);
     };
 
-    // Only run this effect if there is no active search query
-    if (!query) {
-        fetchNews();
-    }
+    fetchNews();
   }, [selectedCategory, userProfile, query]);
 
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query) {
-        // If search is cleared, refetch news for the current category
-        if (selectedCategory) {
-            const newsArticles = await getNewsForCategories([selectedCategory]);
-            setArticles(newsArticles);
-        }
-        return;
+    if (!query.trim()) {
+      // If search is cleared, refetch based on current category
+      setQuery('');
+      return;
     }
-
-    setIsLoadingNews(true);
-    const newsArticles = await searchNews(query);
-    setArticles(newsArticles);
-    setPageTitle(`Results for "${query}"`);
-    setIsLoadingNews(false);
+    // The main useEffect will handle the search
   };
 
 
@@ -102,24 +83,24 @@ export default function HomePage() {
             <h1 className="text-3xl font-bold font-headline">{pageTitle}</h1>
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Category:</span>
-                {selectedCategory && (
-                    <Select value={selectedCategory} onValueChange={(value) => {
-                        setQuery(''); // Clear search when changing category
-                        setSelectedCategory(value);
-                    }}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {userProfile?.preferences && userProfile.preferences.length > 1 && <SelectItem value="all">My Preferences</SelectItem>}
-                            {CATEGORIES.map(category => (
-                                <SelectItem key={category} value={category} className="capitalize">
-                                    {category}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                )}
+                <Select value={selectedCategory} onValueChange={(value) => {
+                    setQuery(''); // Clear search when changing category
+                    setSelectedCategory(value);
+                }}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">
+                          {(userProfile?.preferences && userProfile.preferences.length > 0) ? 'My Preferences' : 'Top Headlines'}
+                        </SelectItem>
+                        {CATEGORIES.map(category => (
+                            <SelectItem key={category} value={category} className="capitalize">
+                                {category}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
         </div>
         <form onSubmit={handleSearch} className="flex w-full max-w-lg items-center space-x-2 mb-8">

@@ -1,18 +1,19 @@
 'use client';
 
 import { useRequireAuth } from '@/hooks/use-require-auth';
-import { updateUserPreferences, getUserProfile } from '@/lib/firestore';
+import { updateUserPreferences } from '@/lib/firestore';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import type { UserProfile } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { useAuth, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import { LogOut, Edit } from 'lucide-react';
 import { EditProfileForm } from '@/components/auth/edit-profile-form';
@@ -21,29 +22,25 @@ import { ThemeToggle } from '@/components/layout/theme-toggle';
 export default function ProfilePage() {
   const { user, isUserLoading } = useRequireAuth();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  const userProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile, isLoading: isLoadingProfile, error: profileError } = useDoc<UserProfile>(userProfileRef);
+
   const [preferences, setPreferences] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  const fetchProfile = useCallback(async () => {
-    if (user) {
-      setIsLoading(true);
-      const profile = await getUserProfile(user.uid);
-      if (profile) {
-        setUserProfile(profile);
-        setPreferences(profile.preferences);
-      }
-      setIsLoading(false);
-    }
-  }, [user]);
-
   useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+    if (userProfile) {
+      setPreferences(userProfile.preferences || []);
+    }
+  }, [userProfile]);
 
   const handlePreferenceChange = (category: string) => {
     setPreferences(prev => 
@@ -87,8 +84,14 @@ export default function ProfilePage() {
     }
     return name.substring(0, 2).toUpperCase();
   };
+  
+  // onProfileUpdate is no longer needed from the form, as useDoc handles updates.
+  const handleProfileUpdate = () => {
+    // The useDoc hook will automatically refresh the data.
+    // We can keep this function for potential future logic if needed.
+  };
 
-  if (isUserLoading || isLoading) {
+  if (isUserLoading || isLoadingProfile) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner className="h-10 w-10" />
@@ -170,7 +173,7 @@ export default function ProfilePage() {
             isOpen={isEditDialogOpen}
             setIsOpen={setIsEditDialogOpen}
             userProfile={userProfile}
-            onProfileUpdate={fetchProfile}
+            onProfileUpdate={handleProfileUpdate}
           />
 
         </>

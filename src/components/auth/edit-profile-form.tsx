@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserProfile } from '@/lib/firestore';
 import { LoadingSpinner } from '../shared/loading-spinner';
@@ -35,10 +35,19 @@ export function EditProfileForm({ isOpen, setIsOpen, userProfile, onProfileUpdat
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: userProfile.username,
-      age: userProfile.age,
+      username: userProfile.username || '',
+      age: userProfile.age || undefined,
     },
   });
+
+  useEffect(() => {
+    // Reset the form when the userProfile prop changes
+    form.reset({
+        username: userProfile.username || '',
+        age: userProfile.age || undefined,
+    });
+  }, [userProfile, form]);
+
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!userProfile) return;
@@ -50,7 +59,7 @@ export function EditProfileForm({ isOpen, setIsOpen, userProfile, onProfileUpdat
           age: values.age || undefined
         };
 
-        // Update Firestore profile
+        // Update Firestore profile (this is now non-blocking)
         updateUserProfile(userProfile.id, profileDataToUpdate);
 
         // Also update Firebase Auth display name if it has changed
@@ -62,7 +71,7 @@ export function EditProfileForm({ isOpen, setIsOpen, userProfile, onProfileUpdat
             title: 'Profile Updated',
             description: 'Your changes have been saved.',
         });
-        onProfileUpdate(); // Re-fetch profile data on parent
+        onProfileUpdate(); // Notify parent (though useDoc will also update)
         setIsOpen(false);
 
     } catch (error: any) {

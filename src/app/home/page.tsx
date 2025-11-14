@@ -2,7 +2,7 @@
 
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { getNewsForCategories, getTopHeadlines, searchNews } from '@/lib/news';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { Article, UserProfile } from '@/types';
 import { NewsCard } from '@/components/news/news-card';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
@@ -28,44 +28,45 @@ export default function HomePage() {
     [firestore, user]
   );
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
+  
+  const fetchNews = useCallback(async () => {
+    setIsLoadingNews(true);
+    let newsArticles: Article[] = [];
+    
+    if (query) {
+      setPageTitle(`Results for "${query}"`);
+      newsArticles = await searchNews(query);
+    } else if (selectedCategory === 'all') {
+      if (userProfile?.preferences && userProfile.preferences.length > 0) {
+          setPageTitle('For You');
+          newsArticles = await getNewsForCategories(userProfile.preferences);
+      } else {
+          setPageTitle('Top Headlines');
+          newsArticles = await getTopHeadlines();
+      }
+    } else {
+      setPageTitle(`${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`);
+      newsArticles = await getNewsForCategories([selectedCategory]);
+    }
+    
+    setArticles(newsArticles);
+    setIsLoadingNews(false);
+  }, [query, selectedCategory, userProfile]);
 
   useEffect(() => {
-    const fetchNews = async () => {
-      setIsLoadingNews(true);
-      let newsArticles: Article[] = [];
-      
-      if (query) {
-        setPageTitle(`Results for "${query}"`);
-        newsArticles = await searchNews(query);
-      } else if (selectedCategory === 'all') {
-        if (userProfile?.preferences && userProfile.preferences.length > 0) {
-            setPageTitle('For You');
-            newsArticles = await getNewsForCategories(userProfile.preferences);
-        } else {
-            setPageTitle('Top Headlines');
-            newsArticles = await getTopHeadlines();
-        }
-      } else {
-        setPageTitle(`${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`);
-        newsArticles = await getNewsForCategories([selectedCategory]);
-      }
-      
-      setArticles(newsArticles);
-      setIsLoadingNews(false);
-    };
-
+    // Fetch news on initial load and when dependencies change.
+    // The useCallback for fetchNews manages when it should re-run.
     fetchNews();
-  }, [selectedCategory, userProfile, query]);
+  }, [fetchNews]);
 
-
-  const handleSearch = async (e: React.FormEvent) => {
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!query.trim()) {
-      // If search is cleared, refetch based on current category
-      setQuery('');
-      return;
-    }
-    // The main useEffect will handle the search
+    // The fetchNews effect will be triggered by the change in 'query' state.
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setQuery(''); // Clear search when changing category
+    setSelectedCategory(value);
   };
 
 
@@ -83,10 +84,7 @@ export default function HomePage() {
             <h1 className="text-3xl font-bold font-headline">{pageTitle}</h1>
             <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Category:</span>
-                <Select value={selectedCategory} onValueChange={(value) => {
-                    setQuery(''); // Clear search when changing category
-                    setSelectedCategory(value);
-                }}>
+                <Select value={selectedCategory} onValueChange={handleCategoryChange}>
                     <SelectTrigger className="w-[180px]">
                         <SelectValue placeholder="Select a category" />
                     </SelectTrigger>

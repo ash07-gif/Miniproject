@@ -3,14 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { Home, TrendingUp, Search, History, Youtube, User } from 'lucide-react';
+import { Home, TrendingUp, History, Youtube, User } from 'lucide-react';
 import { Logo } from '../shared/logo';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/home', label: 'Home', icon: Home },
   { href: '/trending', label: 'Trending', icon: TrendingUp },
-  { href: '/browse', label: 'Browse', icon: Search },
   { href: '/history', label: 'History', icon: History },
   { href: '/videos', label: 'Videos', icon: Youtube },
   { href: '/profile', label: 'Profile', icon: User },

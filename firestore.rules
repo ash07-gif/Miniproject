@@ -1,0 +1,109 @@
+/**
+ * @file Firestore Security Rules for NewsFlash Application
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles and reading history,
+ * while allowing public read access to news articles and trending news.
+ *
+ * Data Structure:
+ * - User profiles are stored under /users/{userId} and are accessible only to the user.
+ * - Reading history is stored under /users/{userId}/readingHistory/{readingHistoryId} and is accessible only to the user.
+ * - News articles are stored under /newsArticles/{articleId} and are publicly readable.
+ * - Trending news is stored under /trendingNews/{trendingNewsId} and is publicly readable.
+ *
+ * Key Security Decisions:
+ * - User listing is not allowed.
+ * - Public read access is granted to news articles and trending news.
+ * - Strict ownership is enforced for user profiles and reading history.
+ * - Data consistency is validated between the path and the document's internal fields for user-owned data.
+ *
+ * Denormalization for Authorization:
+ * The /users/{userId}/readingHistory/{readingHistoryId} path inherently denormalizes the user-reading history relationship,
+ * eliminating the need for costly `get()` calls to verify user ownership. The 'userId' field within the ReadingHistory
+ * entity is maintained for data integrity and potential future use cases, although it's not strictly required for authorization due to the path.
+ *
+ * Structural Segregation:
+ * The application uses separate collections for user-specific private data (user profiles and reading history) and
+ * public data (news articles and trending news). This simplifies security rules and improves query performance.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Allows only the user to read and write their own profile data.
+     * @path /users/{userId}
+     * @allow (create) User with ID 'user123' can create a profile at /users/user123.
+     * @allow (get, update, delete) User with ID 'user123' can get, update, and delete their profile at /users/user123.
+     * @deny (create) User with ID 'user456' cannot create a profile at /users/user123.
+     * @deny (get, update, delete) User with ID 'user456' cannot get, update, or delete the profile at /users/user123.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isOwner(userId) && resource != null && request.resource.data.id == resource.data.id;
+      allow delete: if isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Allows public read access to all news articles, but restricts write access.
+     * @path /newsArticles/{articleId}
+     * @allow (get, list) Any user, authenticated or not, can read news articles.
+     * @deny (create, update, delete) No user can create, update, or delete news articles without proper admin privileges.
+     * @principle Allows public read access but restricts writes.
+     */
+    match /newsArticles/{articleId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Allows only the user to read and write their own reading history.
+     * @path /users/{userId}/readingHistory/{readingHistoryId}
+     * @allow (create) User with ID 'user123' can create a reading history entry at /users/user123/readingHistory/history1.
+     * @allow (get, update, delete) User with ID 'user123' can get, update, and delete their reading history entry at /users/user123/readingHistory/history1.
+     * @deny (create) User with ID 'user456' cannot create a reading history entry at /users/user123/readingHistory/history1.
+     * @deny (get, update, delete) User with ID 'user456' cannot get, update, or delete the reading history entry at /users/user123/readingHistory/history1.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/readingHistory/{readingHistoryId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isOwner(userId) && resource != null && request.resource.data.userId == resource.data.userId;
+      allow delete: if isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Allows public read access to all trending news, but restricts write access.
+     * @path /trendingNews/{trendingNewsId}
+     * @allow (get, list) Any user, authenticated or not, can read trending news.
+     * @deny (create, update, delete) No user can create, update, or delete trending news without proper admin privileges.
+     * @principle Allows public read access but restricts writes.
+     */
+    match /trendingNews/{trendingNewsId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+  }
+}

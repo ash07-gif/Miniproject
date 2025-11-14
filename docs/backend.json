@@ -1,0 +1,222 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile within the NewsFlash application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's chosen username."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "preferences": {
+          "type": "array",
+          "description": "An array of news categories the user prefers.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email",
+        "preferences"
+      ]
+    },
+    "NewsArticle": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "NewsArticle",
+      "type": "object",
+      "description": "Represents a news article.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the NewsArticle entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the news article."
+        },
+        "url": {
+          "type": "string",
+          "description": "The URL where the full news article can be found.",
+          "format": "uri"
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the image associated with the article",
+          "format": "uri"
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the news article (e.g., Sports, Politics)."
+        },
+        "publishedAt": {
+          "type": "string",
+          "description": "The date and time when the news article was published.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "url",
+        "imageUrl",
+        "category",
+        "publishedAt"
+      ]
+    },
+    "ReadingHistory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ReadingHistory",
+      "type": "object",
+      "description": "Represents a user's reading history.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ReadingHistory entry."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N ReadingHistory)"
+        },
+        "articleId": {
+          "type": "string",
+          "description": "Reference to NewsArticle. (Relationship: NewsArticle 1:N ReadingHistory)"
+        },
+        "readAt": {
+          "type": "string",
+          "description": "The date and time when the article was read.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "articleId",
+        "readAt"
+      ]
+    },
+    "TrendingNews": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TrendingNews",
+      "type": "object",
+      "description": "Represents trending news articles.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TrendingNews entry."
+        },
+        "articleId": {
+          "type": "string",
+          "description": "Reference to NewsArticle. (Relationship: NewsArticle 1:N TrendingNews)"
+        },
+        "trendScore": {
+          "type": "number",
+          "description": "A score representing how trending the article is."
+        },
+        "lastTrendedAt": {
+          "type": "string",
+          "description": "The last time the article was considered trending.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "articleId",
+        "trendScore",
+        "lastTrendedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profiles. Path-based ownership: only the user can access their own profile.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/newsArticles/{articleId}",
+        "definition": {
+          "entityName": "NewsArticle",
+          "schema": {
+            "$ref": "#/backend/entities/NewsArticle"
+          },
+          "description": "Stores news articles. No specific authorization needed for reading.",
+          "params": [
+            {
+              "name": "articleId",
+              "description": "The unique identifier of the news article."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/readingHistory/{readingHistoryId}",
+        "definition": {
+          "entityName": "ReadingHistory",
+          "schema": {
+            "$ref": "#/backend/entities/ReadingHistory"
+          },
+          "description": "Stores the reading history of each user. Path-based ownership: only the user can access their own reading history. Includes redundant `userId` field for data integrity.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "readingHistoryId",
+              "description": "The unique identifier of the reading history entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/trendingNews/{trendingNewsId}",
+        "definition": {
+          "entityName": "TrendingNews",
+          "schema": {
+            "$ref": "#/backend/entities/TrendingNews"
+          },
+          "description": "Stores trending news articles. No specific authorization is needed for reading.",
+          "params": [
+            {
+              "name": "trendingNewsId",
+              "description": "The unique identifier of the trending news entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the NewsFlash application's features, focusing on user profiles, news articles, reading history, and trending news. The structure prioritizes authorization independence, clarity, and scalability.\n\n*   **User Profiles:** User profiles are stored in a `users` collection, with each document representing a user and keyed by their `userId`. This provides a straightforward way to manage user data and preferences. Path-based ownership ensures that only the user can access their own profile data.\n*   **News Articles:** News articles are stored in a `newsArticles` collection. Since articles are globally accessible, no specific authorization is needed at the document level for reading; however, administrative roles (not defined in the schema, but assumed) could be added to manage the articles (create, update, delete). The use of a single `newsArticles` collection simplifies querying and displaying news.\n*   **Reading History:** A `readingHistory` subcollection under each user's document stores their reading history. This reflects the 1:N relationship between users and their reading history. Path-based ownership ensures that only the user can access their reading history.\n*   **Trending News:** Trending news articles are stored in a `trendingNews` collection. This collection allows for efficient querying of trending articles based on `trendScore` and `lastTrendedAt`. No specific authorization is needed to read the trending news.\n\n**Authorization Independence:** Denormalization is implicitly achieved via the hierarchical path structure for User Profiles and Reading History. The association between a user and their reading history is guaranteed by the path `/users/{userId}/readingHistory/{readingHistoryId}`, removing the need to `get()` parent documents to validate access. In `readingHistory`, the `userId` field is redundant but maintained for data integrity and potential future use cases. Security rules can directly leverage `request.auth.uid` and the path to enforce ownership.\n\n**QAPs (Rules are not Filters):** The structure supports secure `list` operations. The segregation of concerns into different collections (`users`, `newsArticles`, `trendingNews`) ensures that each collection has a homogeneous security posture. For example, listing articles in `newsArticles` requires no complex filtering based on user roles. Secure `list` operations on `readingHistory` are enabled by the path-based ownership model; only the user can list their own history, without server-side filtering.\n"
+  }
+}

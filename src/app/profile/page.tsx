@@ -1,7 +1,7 @@
 'use client';
 
 import { useRequireAuth } from '@/hooks/use-require-auth';
-import { updateUserPreferences } from '@/lib/firestore';
+import { updateUserPreferences, getUserProfile } from '@/lib/firestore';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,29 +10,31 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import type { UserProfile } from '@/types';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useRequireAuth();
-  const firestore = useFirestore();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [preferences, setPreferences] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const userProfileRef = useMemoFirebase(
-    () => (user ? doc(firestore, 'users', user.uid) : null),
-    [firestore, user]
-  );
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
   useEffect(() => {
-    if (userProfile) {
-      setPreferences(userProfile.preferences);
-    }
-  }, [userProfile]);
+    const fetchProfile = async () => {
+      if (user) {
+        setIsLoading(true);
+        const profile = await getUserProfile(user.uid);
+        if (profile) {
+          setUserProfile(profile);
+          setPreferences(profile.preferences);
+        }
+        setIsLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [user]);
 
   const handlePreferenceChange = (category: string) => {
     setPreferences(prev => 
@@ -46,7 +48,7 @@ export default function ProfilePage() {
     if (!user) return;
     setIsSaving(true);
     try {
-      await updateUserPreferences(user.uid, preferences);
+      updateUserPreferences(user.uid, preferences);
       toast({
         title: 'Success!',
         description: 'Your preferences have been updated.',
@@ -62,7 +64,7 @@ export default function ProfilePage() {
     }
   };
 
-  const getInitials = (name: string | null) => {
+  const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
     const names = name.split(' ');
     if (names.length > 1) {
@@ -75,7 +77,7 @@ export default function ProfilePage() {
     ? format(new Date(user.metadata.lastSignInTime), "PPpp")
     : 'N/A';
 
-  if (isUserLoading || isProfileLoading) {
+  if (isUserLoading || isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner className="h-10 w-10" />

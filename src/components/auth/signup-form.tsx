@@ -54,6 +54,7 @@ export function SignupForm() {
         displayName: values.displayName
       });
 
+      // This is a fire-and-forget operation
       createUserProfile(user.uid, values.email, values.displayName);
       
       toast({

@@ -15,7 +15,7 @@ export function NewsCard({ article }: { article: Article }) {
   
   const timeAgo = article.publishedAt ? formatDistanceToNow(new Date(article.publishedAt), { addSuffix: true }) : '';
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (user) {
       // This is a fire-and-forget operation
       addToReadingHistory(user.uid, article);

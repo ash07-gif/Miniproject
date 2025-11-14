@@ -1,8 +1,10 @@
-import { doc, setDoc, getDoc, updateDoc, collection, addDoc, query, orderBy, limit, getDocs, where, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, collection, addDoc, Timestamp } from 'firebase/firestore';
 import type { UserProfile, Article } from '@/types';
-import { db } from './firebase';
+import { getSdks } from '@/firebase';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+
+const { firestore: db } = getSdks();
 
 export const createUserProfile = (
   userId: string,
@@ -58,34 +60,22 @@ export const addToReadingHistory = (userId: string, article: Article): void => {
     if (!article.url) return;
     const historyCollectionRef = collection(db, `users/${userId}/readingHistory`);
     
+    // Use the URL as a document ID to prevent duplicates
+    const docId = encodeURIComponent(article.url);
+    const historyDocRef = doc(historyCollectionRef, docId);
+
     const historyData = {
         ...article,
         readAt: Timestamp.now(),
         userId: userId,
-        articleId: article.url, // Using URL as a unique ID for the article
+        articleId: article.url, 
     };
 
-    addDoc(historyCollectionRef, historyData).catch(error => {
+    setDoc(historyDocRef, historyData, { merge: true }).catch(error => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
-            path: historyCollectionRef.path,
-            operation: 'create',
+            path: historyDocRef.path,
+            operation: 'write', // 'write' covers create and update
             requestResourceData: historyData,
         }));
-    });
-};
-
-
-export const getReadingHistory = async (userId: string): Promise<Article[]> => {
-    const historyCollectionRef = collection(db, `users/${userId}/readingHistory`);
-    const q = query(historyCollectionRef, orderBy('readAt', 'desc'), limit(50));
-    const querySnapshot = await getDocs(q);
-    
-    return querySnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-            ...data,
-            publishedAt: data.publishedAt,
-            readAt: data.readAt?.toDate().toISOString(),
-        } as Article;
     });
 };

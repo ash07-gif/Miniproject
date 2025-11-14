@@ -46,7 +46,7 @@ export function SignupForm() {
         displayName: values.displayName
       });
 
-      await createUserProfile(user.uid, values.email, values.displayName);
+      createUserProfile(user.uid, values.email, values.displayName);
       
       toast({
         title: 'Account Created',
@@ -55,11 +55,19 @@ export function SignupForm() {
       router.push('/home');
 
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Signup Failed',
-        description: error.message,
-      });
+        if (error.code === 'auth/email-already-in-use') {
+            toast({
+              variant: 'destructive',
+              title: 'Signup Failed',
+              description: 'An account with this email already exists. Please log in.',
+            });
+        } else {
+            toast({
+                variant: 'destructive',
+                title: 'Signup Failed',
+                description: error.message,
+            });
+        }
     } finally {
       setIsLoading(false);
     }

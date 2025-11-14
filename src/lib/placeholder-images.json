@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "auth-background",
+      "description": "Abstract background for authentication pages",
+      "imageUrl": "https://images.unsplash.com/photo-1620121692029-d088224ddc74?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzYzMTMyOTA1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract background"
+    },
+    {
+      "id": "logo-placeholder",
+      "description": "Placeholder for the app logo",
+      "imageUrl": "https://images.unsplash.com/photo-1754837369018-ff35655d126f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGxvZ298ZW58MHx8fHwxNzYzMTM0NDE4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract logo"
+    },
+    {
+      "id": "fallback-news",
+      "description": "Fallback image for news articles without one",
+      "imageUrl": "https://images.unsplash.com/photo-1673553830381-9e88f45bb714?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxuZXdzJTIwYXJ0aWNsZXxlbnwwfHx8fDE3NjMxNTUxOTJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "news article"
+    }
+  ]
 }

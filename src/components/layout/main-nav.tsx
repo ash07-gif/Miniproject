@@ -28,9 +28,9 @@ export function MainNav() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior>
+              <Link href={item.href} passHref legacyBehavior={false}>
                 <SidebarMenuButton
-                  asChild
+                  as="a"
                   isActive={pathname.startsWith(item.href)}
                   tooltip={item.label}
                   className={cn(
@@ -38,10 +38,8 @@ export function MainNav() {
                     pathname.startsWith(item.href) && 'bg-primary/10 text-primary'
                   )}
                 >
-                  <a>
-                    <item.icon className="h-5 w-5" />
-                    <span className="font-headline">{item.label}</span>
-                  </a>
+                  <item.icon className="h-5 w-5" />
+                  <span className="font-headline">{item.label}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>

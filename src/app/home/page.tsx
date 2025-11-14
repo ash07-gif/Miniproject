@@ -25,17 +25,21 @@ export default function HomePage() {
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (userProfile && !isLoadingProfile) {
-      if (selectedCategory === 'all') {
-        setSelectedCategory(userProfile.preferences[0] || 'general');
-      }
+    if (userProfile && !isLoadingProfile && selectedCategory === 'all') {
+        const firstPreference = userProfile.preferences?.[0];
+        if (firstPreference) {
+            setSelectedCategory(firstPreference);
+        } else {
+            setSelectedCategory('general');
+        }
     }
-  }, [userProfile, isLoadingProfile, selectedCategory]);
+  }, [userProfile, isLoadingProfile]);
 
   useEffect(() => {
     const fetchNews = async () => {
       setIsLoadingNews(true);
       let newsArticles: Article[] = [];
+      
       if (selectedCategory && selectedCategory !== 'all') {
         newsArticles = await getNewsForCategories([selectedCategory]);
       } else if (userProfile?.preferences && userProfile.preferences.length > 0) {
@@ -43,6 +47,7 @@ export default function HomePage() {
       } else {
         newsArticles = await getTopHeadlines();
       }
+      
       setArticles(newsArticles);
       setIsLoadingNews(false);
     };
@@ -50,7 +55,7 @@ export default function HomePage() {
     if (!isLoadingProfile) {
         fetchNews();
     }
-  }, [userProfile, isLoadingProfile, selectedCategory]);
+  }, [selectedCategory, userProfile, isLoadingProfile]);
 
   if (isLoadingProfile) {
     return (
@@ -71,7 +76,7 @@ export default function HomePage() {
                         <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                        {userProfile?.preferences.length > 1 && <SelectItem value="all">My Preferences</SelectItem>}
+                        {userProfile?.preferences && userProfile.preferences.length > 1 && <SelectItem value="all">My Preferences</SelectItem>}
                         {CATEGORIES.map(category => (
                             <SelectItem key={category} value={category} className="capitalize">
                                 {category}

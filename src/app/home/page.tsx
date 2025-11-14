@@ -16,7 +16,7 @@ export default function HomePage() {
   const firestore = useFirestore();
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoadingNews, setIsLoadingNews] = useState(true);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   const userProfileRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -25,28 +25,25 @@ export default function HomePage() {
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (userProfile && !isLoadingProfile && selectedCategory === 'all') {
-        const firstPreference = userProfile.preferences?.[0];
-        if (firstPreference) {
-            setSelectedCategory(firstPreference);
-        } else {
-            setSelectedCategory('general');
-        }
+    // Set initial category from profile once loaded
+    if (userProfile && !isLoadingProfile && selectedCategory === null) {
+      const firstPreference = userProfile.preferences?.[0] || 'general';
+      setSelectedCategory(firstPreference);
     }
   }, [userProfile, isLoadingProfile, selectedCategory]);
 
   useEffect(() => {
     const fetchNews = async () => {
+      if (!selectedCategory) return; // Don't fetch until a category is set
+
       setIsLoadingNews(true);
       let newsArticles: Article[] = [];
       
-      if (selectedCategory && selectedCategory !== 'all') {
+      if (selectedCategory !== 'all') {
         newsArticles = await getNewsForCategories([selectedCategory]);
       } else if (userProfile?.preferences && userProfile.preferences.length > 0) {
-        // When 'all' is selected, use all preferences
         newsArticles = await getNewsForCategories(userProfile.preferences);
       } else {
-        // Fallback for users without preferences or when 'all' is selected without preferences
         newsArticles = await getTopHeadlines();
       }
       
@@ -58,6 +55,7 @@ export default function HomePage() {
         fetchNews();
     }
   }, [selectedCategory, userProfile, isLoadingProfile]);
+
 
   if (isLoadingProfile) {
     return (
@@ -73,19 +71,21 @@ export default function HomePage() {
             <h1 className="text-3xl font-bold font-headline">For You</h1>
             <div className="flex items-center gap-2 mt-4 md:mt-0">
                 <span className="text-sm text-muted-foreground">Category:</span>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-[180px]">
-                        <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {userProfile?.preferences && userProfile.preferences.length > 1 && <SelectItem value="all">My Preferences</SelectItem>}
-                        {CATEGORIES.map(category => (
-                            <SelectItem key={category} value={category} className="capitalize">
-                                {category}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                {selectedCategory && (
+                    <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                        <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select a category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {userProfile?.preferences && userProfile.preferences.length > 1 && <SelectItem value="all">My Preferences</SelectItem>}
+                            {CATEGORIES.map(category => (
+                                <SelectItem key={category} value={category} className="capitalize">
+                                    {category}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                )}
             </div>
         </div>
       {isLoadingNews ? (

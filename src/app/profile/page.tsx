@@ -1,7 +1,7 @@
 'use client';
 
 import { useRequireAuth } from '@/hooks/use-require-auth';
-import { updateUserPreferences, getUserProfile } from '@/lib/firestore';
+import { updateUserPreferences } from '@/lib/firestore';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,29 +10,29 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import type { UserProfile } from '@/types';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { format } from 'date-fns';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useRequireAuth();
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isProfileLoading, setIsProfileLoading] = useState(true);
+  const firestore = useFirestore();
   const [preferences, setPreferences] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
+  const userProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
   useEffect(() => {
-    const fetchProfile = async () => {
-      if (user) {
-        setIsProfileLoading(true);
-        const profile = await getUserProfile(user.uid);
-        setUserProfile(profile);
-        if (profile) {
-          setPreferences(profile.preferences);
-        }
-        setIsProfileLoading(false);
-      }
-    };
-    fetchProfile();
-  }, [user]);
+    if (userProfile) {
+      setPreferences(userProfile.preferences);
+    }
+  }, [userProfile]);
 
   const handlePreferenceChange = (category: string) => {
     setPreferences(prev => 
@@ -62,6 +62,19 @@ export default function ProfilePage() {
     }
   };
 
+  const getInitials = (name: string | null) => {
+    if (!name) return 'U';
+    const names = name.split(' ');
+    if (names.length > 1) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const lastLogin = user?.metadata.lastSignInTime 
+    ? format(new Date(user.metadata.lastSignInTime), "PPpp")
+    : 'N/A';
+
   if (isUserLoading || isProfileLoading) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -73,7 +86,7 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto max-w-2xl">
       <h1 className="text-3xl font-bold mb-6 font-headline">Profile</h1>
-      {userProfile ? (
+      {userProfile && user ? (
         <>
           <Card>
             <CardHeader>
@@ -81,13 +94,23 @@ export default function ProfilePage() {
               <CardDescription>View and manage your account details.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Name</p>
-                <p>{userProfile.username}</p>
+               <div className="flex items-center space-x-4">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
+                  <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Name</p>
+                  <p>{userProfile.username}</p>
+                </div>
               </div>
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Email</p>
                 <p>{userProfile.email}</p>
+              </div>
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">Last Login</p>
+                <p>{lastLogin}</p>
               </div>
             </CardContent>
           </Card>

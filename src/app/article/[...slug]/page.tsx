@@ -1,7 +1,7 @@
 'use client';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/firebase';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, BrainCircuit } from 'lucide-react';
@@ -12,7 +12,7 @@ import { addToReadingHistory } from '@/lib/firestore';
 export default function ArticlePage() {
     const params = useParams();
     const router = useRouter();
-    const { user } = useAuth();
+    const { user } = useUser();
 
     const [url, setUrl] = useState<string>('');
     const [isLoading, setIsLoading] = useState(true);
@@ -79,4 +79,3 @@ export default function ArticlePage() {
         </div>
     );
 }
-

@@ -2,22 +2,22 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/firebase';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
 
 export default function RootPage() {
-  const { user, loading } = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading) {
+    if (!isUserLoading) {
       if (user) {
         router.replace('/home');
       } else {
         router.replace('/login');
       }
     }
-  }, [user, loading, router]);
+  }, [user, isUserLoading, router]);
 
   return (
     <div className="flex h-screen items-center justify-center">

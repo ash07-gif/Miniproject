@@ -12,10 +12,12 @@ export interface Article {
 }
 
 export interface UserProfile {
+  id: string;
+  username: string;
   email: string;
-  displayName: string;
   preferences: string[];
 }
+
 
 export interface YouTubeVideo {
     id: string;

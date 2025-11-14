@@ -4,15 +4,26 @@ import { usePathname } from 'next/navigation';
 import { SidebarProvider, Sidebar, SidebarInset } from '@/components/ui/sidebar';
 import { MainNav } from './main-nav';
 import { Header } from './header';
+import { useUser } from '@/firebase';
+import { LoadingSpinner } from '../shared/loading-spinner';
 
 const authRoutes = ['/login', '/signup'];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user, isUserLoading } = useUser();
   const isAuthRoute = authRoutes.includes(pathname);
 
   if (isAuthRoute) {
     return <main>{children}</main>;
+  }
+
+  if (isUserLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <LoadingSpinner className="h-12 w-12" />
+      </div>
+    );
   }
 
   return (

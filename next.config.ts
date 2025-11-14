@@ -52,6 +52,12 @@ const nextConfig: NextConfig = {
         hostname: 'ichef.bbci.co.uk',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'platform.theverge.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

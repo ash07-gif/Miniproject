@@ -1,16 +1,14 @@
 import { doc, setDoc, getDoc, updateDoc, collection, addDoc, query, orderBy, limit, getDocs, where, Timestamp } from 'firebase/firestore';
-import { db } from './firebase';
 import type { UserProfile, Article } from '@/types';
 import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { useFirestore } from '@/firebase';
+import { db } from './firebase';
 
 export const createUserProfile = async (
   userId: string,
   email: string,
   displayName: string
 ): Promise<void> => {
-    const firestore = useFirestore();
-    const userRef = doc(firestore, 'users', userId);
+    const userRef = doc(db, 'users', userId);
     // Use non-blocking write
     setDocumentNonBlocking(userRef, {
         id: userId,
@@ -21,8 +19,7 @@ export const createUserProfile = async (
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
-  const firestore = useFirestore();
-  const userRef = doc(firestore, 'users', userId);
+  const userRef = doc(db, 'users', userId);
   const docSnap = await getDoc(userRef);
   if (docSnap.exists()) {
     return docSnap.data() as UserProfile;
@@ -31,16 +28,14 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 };
 
 export const updateUserPreferences = async (userId: string, preferences: string[]): Promise<void> => {
-  const firestore = useFirestore();
-  const userRef = doc(firestore, 'users', userId);
+  const userRef = doc(db, 'users', userId);
   // Use non-blocking update
   updateDocumentNonBlocking(userRef, { preferences });
 };
 
 export const addToReadingHistory = (userId: string, article: Article): void => {
     if (!article.url) return;
-    const firestore = useFirestore();
-    const historyCollectionRef = collection(firestore, `users/${userId}/readingHistory`);
+    const historyCollectionRef = collection(db, `users/${userId}/readingHistory`);
     
     // Non-blocking add
     addDocumentNonBlocking(historyCollectionRef, {
@@ -53,8 +48,7 @@ export const addToReadingHistory = (userId: string, article: Article): void => {
 
 
 export const getReadingHistory = async (userId: string): Promise<Article[]> => {
-    const firestore = useFirestore();
-    const historyCollectionRef = collection(firestore, `users/${userId}/readingHistory`);
+    const historyCollectionRef = collection(db, `users/${userId}/readingHistory`);
     const q = query(historyCollectionRef, orderBy('readAt', 'desc'), limit(50));
     const querySnapshot = await getDocs(q);
     

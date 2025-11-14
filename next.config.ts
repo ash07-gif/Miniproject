@@ -58,6 +58,12 @@ const nextConfig: NextConfig = {
         hostname: 'platform.theverge.com',
         port: '',
         pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'gizmodo.com',
+        port: '',
+        pathname: '/**',
       }
     ],
   },

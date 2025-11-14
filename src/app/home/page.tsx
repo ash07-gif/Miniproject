@@ -33,7 +33,7 @@ export default function HomePage() {
             setSelectedCategory('general');
         }
     }
-  }, [userProfile, isLoadingProfile]);
+  }, [userProfile, isLoadingProfile, selectedCategory]);
 
   useEffect(() => {
     const fetchNews = async () => {
@@ -43,8 +43,10 @@ export default function HomePage() {
       if (selectedCategory && selectedCategory !== 'all') {
         newsArticles = await getNewsForCategories([selectedCategory]);
       } else if (userProfile?.preferences && userProfile.preferences.length > 0) {
+        // When 'all' is selected, use all preferences
         newsArticles = await getNewsForCategories(userProfile.preferences);
       } else {
+        // Fallback for users without preferences or when 'all' is selected without preferences
         newsArticles = await getTopHeadlines();
       }
       

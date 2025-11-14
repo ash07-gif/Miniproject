@@ -25,6 +25,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "age": {
+          "type": "number",
+          "description": "The user's age."
         }
       },
       "required": [

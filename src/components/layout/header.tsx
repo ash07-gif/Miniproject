@@ -3,6 +3,7 @@
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserNav } from './user-nav';
 import { Logo } from '../shared/logo';
+import { ThemeToggle } from './theme-toggle';
 
 export function Header() {
   return (
@@ -11,7 +12,8 @@ export function Header() {
         <SidebarTrigger />
         <Logo />
       </div>
-      <div className="ml-auto">
+      <div className="ml-auto flex items-center gap-2">
+        <ThemeToggle />
         <UserNav />
       </div>
     </header>

@@ -16,6 +16,7 @@ export interface UserProfile {
   username: string;
   email: string;
   preferences: string[];
+  age?: number;
 }
 
 

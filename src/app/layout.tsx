@@ -4,9 +4,10 @@ import './globals.css';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { ThemeProvider } from '@/components/layout/theme-provider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space-grotesk' });
+const spaceGrotesk = Space_Groteck({ subsets: ['latin'], variable: '--font-space-grotesk' });
 
 export const metadata: Metadata = {
   title: 'NewsFlash',
@@ -21,10 +22,17 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${spaceGrotesk.variable} font-body antialiased`}>
-        <FirebaseClientProvider>
-          <AppLayout>{children}</AppLayout>
-          <Toaster />
-        </FirebaseClientProvider>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+        >
+            <FirebaseClientProvider>
+            <AppLayout>{children}</AppLayout>
+            <Toaster />
+            </FirebaseClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

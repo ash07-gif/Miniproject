@@ -45,6 +45,18 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
   }
 };
 
+export const updateUserProfile = (userId: string, data: Partial<UserProfile>): void => {
+  const userRef = doc(db, 'users', userId);
+  updateDoc(userRef, data).catch(error => {
+    errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: userRef.path,
+        operation: 'update',
+        requestResourceData: data,
+    }));
+  });
+};
+
+
 export const updateUserPreferences = (userId: string, preferences: string[]): void => {
   const userRef = doc(db, 'users', userId);
   updateDoc(userRef, { preferences }).catch(error => {

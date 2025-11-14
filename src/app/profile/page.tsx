@@ -12,27 +12,37 @@ import { LoadingSpinner } from '@/components/shared/loading-spinner';
 import type { UserProfile } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
+import { signOut } from 'firebase/auth';
+import { useAuth } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { LogOut, Edit } from 'lucide-react';
+import { EditProfileForm } from '@/components/auth/edit-profile-form';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useRequireAuth();
+  const auth = useAuth();
+  const router = useRouter();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [preferences, setPreferences] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (user) {
-        setIsLoading(true);
-        const profile = await getUserProfile(user.uid);
-        if (profile) {
-          setUserProfile(profile);
-          setPreferences(profile.preferences);
-        }
-        setIsLoading(false);
+  const fetchProfile = async () => {
+    if (user) {
+      setIsLoading(true);
+      const profile = await getUserProfile(user.uid);
+      if (profile) {
+        setUserProfile(profile);
+        setPreferences(profile.preferences);
       }
-    };
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProfile();
   }, [user]);
 
@@ -64,6 +74,11 @@ export default function ProfilePage() {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
+
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
     const names = name.split(' ');
@@ -87,13 +102,24 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto max-w-2xl">
-      <h1 className="text-3xl font-bold mb-6 font-headline">Profile</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold font-headline">Profile</h1>
+        <ThemeToggle />
+      </div>
       {userProfile && user ? (
         <>
           <Card>
             <CardHeader>
-              <CardTitle>My Information</CardTitle>
-              <CardDescription>View and manage your account details.</CardDescription>
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle>My Information</CardTitle>
+                  <CardDescription>View and manage your account details.</CardDescription>
+                </div>
+                <Button variant="outline" size="icon" onClick={() => setIsEditDialogOpen(true)}>
+                  <Edit className="h-4 w-4" />
+                  <span className="sr-only">Edit Profile</span>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
                <div className="flex items-center space-x-4">
@@ -101,14 +127,11 @@ export default function ProfilePage() {
                   <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
                   <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Name</p>
-                  <p>{userProfile.username}</p>
+                <div className="grid gap-1.5">
+                  <p className="font-semibold">{userProfile.username}</p>
+                  <p className="text-sm text-muted-foreground">{userProfile.email}</p>
+                   {userProfile.age && <p className="text-sm text-muted-foreground">Age: {userProfile.age}</p>}
                 </div>
-              </div>
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p>{userProfile.email}</p>
               </div>
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Last Login</p>
@@ -141,10 +164,23 @@ export default function ProfilePage() {
                 ))}
               </div>
               <Button onClick={handleSaveChanges} disabled={isSaving} className="mt-6">
-                {isSaving ? <LoadingSpinner /> : 'Save Changes'}
+                {isSaving ? <LoadingSpinner /> : 'Save Preferences'}
               </Button>
             </CardContent>
           </Card>
+
+          <Button variant="destructive" onClick={handleLogout} className="mt-8 w-full">
+            <LogOut className="mr-2 h-4 w-4" />
+            Log Out
+          </Button>
+
+          <EditProfileForm 
+            isOpen={isEditDialogOpen}
+            setIsOpen={setIsEditDialogOpen}
+            userProfile={userProfile}
+            onProfileUpdate={fetchProfile}
+          />
+
         </>
       ) : (
         <div className="text-center text-muted-foreground mt-12">

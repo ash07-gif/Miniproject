@@ -1,7 +1,7 @@
 'use client';
 
 import { useRequireAuth } from '@/hooks/use-require-auth';
-import { updateUserPreferences } from '@/lib/firestore';
+import { updateUserPreferences, getUserProfile } from '@/lib/firestore';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,28 +9,30 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { LoadingSpinner } from '@/components/shared/loading-spinner';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/types';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useRequireAuth();
-  const firestore = useFirestore();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
   const [preferences, setPreferences] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
-  const userProfileRef = useMemoFirebase(
-    () => (user ? doc(firestore, 'users', user.uid) : null),
-    [firestore, user]
-  );
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
   useEffect(() => {
-    if (userProfile) {
-      setPreferences(userProfile.preferences);
-    }
-  }, [userProfile]);
+    const fetchProfile = async () => {
+      if (user) {
+        setIsProfileLoading(true);
+        const profile = await getUserProfile(user.uid);
+        setUserProfile(profile);
+        if (profile) {
+          setPreferences(profile.preferences);
+        }
+        setIsProfileLoading(false);
+      }
+    };
+    fetchProfile();
+  }, [user]);
 
   const handlePreferenceChange = (category: string) => {
     setPreferences(prev => 
@@ -71,7 +73,7 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto max-w-2xl">
       <h1 className="text-3xl font-bold mb-6 font-headline">Profile</h1>
-      {userProfile && (
+      {userProfile ? (
         <>
           <Card>
             <CardHeader>
@@ -119,6 +121,10 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         </>
+      ) : (
+        <div className="text-center text-muted-foreground mt-12">
+            <p>Could not load your profile.</p>
+        </div>
       )}
     </div>
   );

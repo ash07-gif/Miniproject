@@ -1,48 +1,76 @@
 import { doc, setDoc, getDoc, updateDoc, collection, addDoc, query, orderBy, limit, getDocs, where, Timestamp } from 'firebase/firestore';
 import type { UserProfile, Article } from '@/types';
-import { addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { db } from './firebase';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-export const createUserProfile = async (
+export const createUserProfile = (
   userId: string,
   email: string,
   displayName: string
-): Promise<void> => {
+): void => {
     const userRef = doc(db, 'users', userId);
-    // Use non-blocking write
-    setDocumentNonBlocking(userRef, {
+    const userData = {
         id: userId,
         email,
         username: displayName,
         preferences: ['general', 'technology'], // Default preferences
-    }, { merge: true });
+    };
+    setDoc(userRef, userData, { merge: true }).catch(error => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: userRef.path,
+            operation: 'create',
+            requestResourceData: userData,
+        }));
+    });
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  if (!userId) return null;
   const userRef = doc(db, 'users', userId);
-  const docSnap = await getDoc(userRef);
-  if (docSnap.exists()) {
-    return docSnap.data() as UserProfile;
+  try {
+    const docSnap = await getDoc(userRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error("Error getting user profile:", error);
+    // We don't emit a permission error here for reads, 
+    // as it's handled by useDoc/useCollection hooks. 
+    // If this function is used outside a hook, specific error handling might be needed.
+    return null;
   }
-  return null;
 };
 
-export const updateUserPreferences = async (userId: string, preferences: string[]): Promise<void> => {
+export const updateUserPreferences = (userId: string, preferences: string[]): void => {
   const userRef = doc(db, 'users', userId);
-  // Use non-blocking update
-  updateDocumentNonBlocking(userRef, { preferences });
+  updateDoc(userRef, { preferences }).catch(error => {
+    errorEmitter.emit('permission-error', new FirestorePermissionError({
+        path: userRef.path,
+        operation: 'update',
+        requestResourceData: { preferences },
+    }));
+  });
 };
 
 export const addToReadingHistory = (userId: string, article: Article): void => {
     if (!article.url) return;
     const historyCollectionRef = collection(db, `users/${userId}/readingHistory`);
     
-    // Non-blocking add
-    addDocumentNonBlocking(historyCollectionRef, {
+    const historyData = {
         ...article,
         readAt: Timestamp.now(),
         userId: userId,
         articleId: article.url, // Using URL as a unique ID for the article
+    };
+
+    addDoc(historyCollectionRef, historyData).catch(error => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: historyCollectionRef.path,
+            operation: 'create',
+            requestResourceData: historyData,
+        }));
     });
 };
 

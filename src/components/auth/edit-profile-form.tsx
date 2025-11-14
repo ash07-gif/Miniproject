@@ -45,8 +45,13 @@ export function EditProfileForm({ isOpen, setIsOpen, userProfile, onProfileUpdat
     setIsLoading(true);
 
     try {
+        const profileDataToUpdate: Partial<UserProfile> = {
+          username: values.username,
+          age: values.age || undefined
+        };
+
         // Update Firestore profile
-        updateUserProfile(userProfile.id, values);
+        updateUserProfile(userProfile.id, profileDataToUpdate);
 
         // Also update Firebase Auth display name if it has changed
         if (auth.currentUser && auth.currentUser.displayName !== values.username) {

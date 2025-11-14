@@ -16,6 +16,7 @@ import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { LogOut, Edit } from 'lucide-react';
 import { EditProfileForm } from '@/components/auth/edit-profile-form';
+import { ThemeToggle } from '@/components/layout/theme-toggle';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useRequireAuth();
@@ -73,6 +74,7 @@ export default function ProfilePage() {
   };
 
   const handleLogout = async () => {
+    if (!auth) return;
     await signOut(auth);
     router.push('/login');
   };
@@ -98,6 +100,7 @@ export default function ProfilePage() {
     <div className="container mx-auto max-w-2xl">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold font-headline">Profile</h1>
+        <ThemeToggle />
       </div>
       {userProfile && user ? (
         <>
@@ -123,6 +126,7 @@ export default function ProfilePage() {
                 <div className="grid gap-1.5">
                   <p className="font-semibold">{userProfile.username}</p>
                   <p className="text-sm text-muted-foreground">{userProfile.email}</p>
+                   {userProfile.age && <p className="text-sm text-muted-foreground">Age: {userProfile.age}</p>}
                 </div>
               </div>
             </CardContent>

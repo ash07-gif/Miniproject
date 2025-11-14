@@ -30,7 +30,7 @@ export default function HomePage() {
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    // Set initial category from profile once loaded
+    // Set initial category from profile once loaded, if it hasn't been set yet.
     if (userProfile && !isLoadingProfile && selectedCategory === null) {
       const firstPreference = userProfile.preferences?.[0] || 'general';
       setSelectedCategory(firstPreference);
@@ -39,21 +39,23 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchNews = async () => {
-      // Don't fetch until a category is set and profile is loaded
-      if (!selectedCategory || isLoadingProfile) return; 
+      // Don't fetch until a category is set. isLoadingProfile check is implicitly handled by selectedCategory being null until profile loads.
+      if (!selectedCategory) return;
 
       setIsLoadingNews(true);
       let newsArticles: Article[] = [];
       
-      if (selectedCategory !== 'all') {
-        newsArticles = await getNewsForCategories([selectedCategory]);
-        setPageTitle('For You');
-      } else if (userProfile?.preferences && userProfile.preferences.length > 0) {
-        newsArticles = await getNewsForCategories(userProfile.preferences);
-        setPageTitle('For You');
+      if (selectedCategory === 'all') {
+        if (userProfile?.preferences && userProfile.preferences.length > 0) {
+            newsArticles = await getNewsForCategories(userProfile.preferences);
+            setPageTitle('For You');
+        } else {
+            newsArticles = await getTopHeadlines();
+            setPageTitle('Top Headlines');
+        }
       } else {
-        newsArticles = await getTopHeadlines();
-        setPageTitle('Top Headlines');
+        newsArticles = await getNewsForCategories([selectedCategory]);
+        setPageTitle(`For You - ${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`);
       }
       
       setArticles(newsArticles);
@@ -64,15 +66,17 @@ export default function HomePage() {
     if (!query) {
         fetchNews();
     }
-  }, [selectedCategory, userProfile, isLoadingProfile, query]);
+  }, [selectedCategory, userProfile, query]);
 
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query) {
-        // If search is cleared, fetch news based on category again
-        const firstPreference = userProfile?.preferences?.[0] || 'general';
-        setSelectedCategory(firstPreference);
+        // If search is cleared, refetch news for the current category
+        if (selectedCategory) {
+            const newsArticles = await getNewsForCategories([selectedCategory]);
+            setArticles(newsArticles);
+        }
         return;
     }
 
@@ -84,7 +88,7 @@ export default function HomePage() {
   };
 
 
-  if (isLoadingProfile) {
+  if (isLoadingProfile && !userProfile) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner className="h-10 w-10" />

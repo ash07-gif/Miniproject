@@ -1,7 +1,7 @@
 'use client';
 
 import { useRequireAuth } from '@/hooks/use-require-auth';
-import { updateUserPreferences } from '@/lib/firestore';
+import { createUserProfile, updateUserPreferences } from '@/lib/firestore';
 import { CATEGORIES } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, Edit } from 'lucide-react';
 import { EditProfileForm } from '@/components/auth/edit-profile-form';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { Input } from '@/components/ui/input';
 
 export default function ProfilePage() {
   const { user, isUserLoading } = useRequireAuth();
@@ -29,12 +30,16 @@ export default function ProfilePage() {
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [firestore, user]
   );
-  const { data: userProfile, isLoading: isLoadingProfile, error: profileError } = useDoc<UserProfile>(userProfileRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
 
   const [preferences, setPreferences] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // For first-time profile creation
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
 
   useEffect(() => {
     if (userProfile) {
@@ -76,6 +81,34 @@ export default function ProfilePage() {
     router.push('/login');
   };
 
+  const handleCreateProfile = () => {
+    if (!user || !newUsername.trim()) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Name cannot be empty.',
+        });
+        return;
+    }
+    setIsCreatingProfile(true);
+    try {
+        createUserProfile(user.uid, user.email || '', newUsername, preferences);
+        toast({
+            title: 'Profile Created!',
+            description: 'Welcome to NewsFlash!',
+        });
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error',
+            description: 'Could not create your profile.',
+        });
+    } finally {
+        setIsCreatingProfile(false);
+    }
+  };
+
+
   const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
     const names = name.split(' ');
@@ -84,19 +117,67 @@ export default function ProfilePage() {
     }
     return name.substring(0, 2).toUpperCase();
   };
-  
-  // onProfileUpdate is no longer needed from the form, as useDoc handles updates.
-  const handleProfileUpdate = () => {
-    // The useDoc hook will automatically refresh the data.
-    // We can keep this function for potential future logic if needed.
-  };
 
-  if (isUserLoading || isLoadingProfile) {
+  if (isUserLoading || (isLoadingProfile && userProfile === undefined)) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingSpinner className="h-10 w-10" />
       </div>
     );
+  }
+
+  // User is loaded, but profile document doesn't exist.
+  if (!isLoadingProfile && !userProfile && user) {
+     return (
+        <div className="container mx-auto max-w-2xl">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold font-headline">Create Your Profile</h1>
+                <ThemeToggle />
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>Welcome to NewsFlash!</CardTitle>
+                    <CardDescription>
+                        Let's set up your profile. Your email is <span className="font-medium text-foreground">{user.email}</span>.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="space-y-2">
+                         <label htmlFor="name" className="text-sm font-medium leading-none">Your Name</label>
+                        <Input 
+                            id="name"
+                            placeholder="Enter your name"
+                            value={newUsername}
+                            onChange={(e) => setNewUsername(e.target.value)}
+                        />
+                    </div>
+                    <div className="space-y-4">
+                        <p className="text-sm font-medium">Select your news preferences</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {CATEGORIES.map(category => (
+                            <div key={category} className="flex items-center space-x-2">
+                                <Checkbox
+                                id={category}
+                                checked={preferences.includes(category)}
+                                onCheckedChange={() => handlePreferenceChange(category)}
+                                />
+                                <label
+                                htmlFor={category}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 capitalize"
+                                >
+                                {category}
+                                </label>
+                            </div>
+                            ))}
+                        </div>
+                    </div>
+                    <Button onClick={handleCreateProfile} disabled={isCreatingProfile} className="w-full">
+                        {isCreatingProfile ? <LoadingSpinner /> : 'Create Profile'}
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+     );
   }
 
   return (
@@ -173,7 +254,7 @@ export default function ProfilePage() {
             isOpen={isEditDialogOpen}
             setIsOpen={setIsEditDialogOpen}
             userProfile={userProfile}
-            onProfileUpdate={handleProfileUpdate}
+            onProfileUpdate={() => {}}
           />
 
         </>

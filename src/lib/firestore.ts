@@ -9,14 +9,15 @@ const { firestore: db } = getSdks();
 export const createUserProfile = (
   userId: string,
   email: string,
-  displayName: string
+  displayName: string,
+  preferences: string[] = []
 ): void => {
     const userRef = doc(db, 'users', userId);
     const userData = {
         id: userId,
         email,
         username: displayName,
-        preferences: ['general', 'technology'], // Default preferences
+        preferences: preferences.length > 0 ? preferences : ['general', 'technology'],
     };
     setDoc(userRef, userData, { merge: true }).catch(error => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({

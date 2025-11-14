@@ -12,7 +12,6 @@ import { useAuth } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { createUserProfile } from '@/lib/firestore';
 import { LoadingSpinner } from '../shared/loading-spinner';
 
 const formSchema = z.object({
@@ -53,15 +52,12 @@ export function SignupForm() {
       await updateProfile(user, {
         displayName: values.displayName
       });
-
-      // This is a fire-and-forget operation
-      createUserProfile(user.uid, values.email, values.displayName);
       
       toast({
         title: 'Account Created',
-        description: 'Welcome to NewsFlash!',
+        description: "Welcome! Let's set up your profile.",
       });
-      router.push('/home');
+      router.push('/profile'); // Redirect to profile page to complete setup
 
     } catch (error: any) {
         if (error.code === 'auth/email-already-in-use') {

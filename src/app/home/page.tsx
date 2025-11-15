@@ -28,24 +28,25 @@ export default function HomePage() {
     [firestore, user]
   );
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userProfileRef);
-  
+
   const fetchNews = useCallback(async () => {
     setIsLoadingNews(true);
     let newsArticles: Article[] = [];
-    
+
     if (query) {
       setPageTitle(`Results for "${query}"`);
       newsArticles = await searchNews(query);
     } else if (selectedCategory === 'all') {
       if (userProfile?.preferences && userProfile.preferences.length > 0) {
-          setPageTitle('For You');
-          newsArticles = await getNewsForCategories(userProfile.preferences);
+        setPageTitle('For You');
+        newsArticles = await getNewsForCategories(userProfile.preferences);
       } else {
-          setPageTitle('Top Headlines');
-          newsArticles = await getTopHeadlines();
+        setPageTitle('Top Headlines');
+        newsArticles = await getTopHeadlines();
       }
     } else {
-      setPageTitle(`${selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}`);
+      const categoryName = selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1);
+      setPageTitle(categoryName);
       newsArticles = await getNewsForCategories([selectedCategory]);
     }
     
@@ -54,14 +55,28 @@ export default function HomePage() {
   }, [query, selectedCategory, userProfile]);
 
   useEffect(() => {
-    // Fetch news on initial load and when dependencies change.
-    // The useCallback for fetchNews manages when it should re-run.
-    fetchNews();
-  }, [fetchNews]);
+    // Initial fetch for top headlines, doesn't wait for profile.
+    const initialFetch = async () => {
+        setIsLoadingNews(true);
+        const newsArticles = await getTopHeadlines();
+        setArticles(newsArticles);
+        setIsLoadingNews(false);
+    }
+    initialFetch();
+  }, []);
+
+  useEffect(() => {
+    // This effect runs when profile or category changes, to fetch personalized news.
+    // It skips the initial "all" category fetch if profile is not loaded yet.
+    if (!isLoadingProfile) {
+        fetchNews();
+    }
+  }, [selectedCategory, query, userProfile, isLoadingProfile, fetchNews]);
+
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // The fetchNews effect will be triggered by the change in 'query' state.
+    fetchNews();
   };
 
   const handleCategoryChange = (value: string) => {
@@ -69,13 +84,8 @@ export default function HomePage() {
     setSelectedCategory(value);
   };
 
-
   if (isLoadingProfile && !userProfile) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <LoadingSpinner className="h-10 w-10" />
-      </div>
-    );
+    // Keep showing loading spinner while profile loads, but news might already be visible.
   }
   
   return (
@@ -90,7 +100,7 @@ export default function HomePage() {
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">
-                          {(userProfile?.preferences && userProfile.preferences.length > 0) ? 'My Preferences' : 'Top Headlines'}
+                          {(userProfile?.preferences && userProfile.preferences.length > 0) ? 'For You' : 'Top Headlines'}
                         </SelectItem>
                         {CATEGORIES.map(category => (
                             <SelectItem key={category} value={category} className="capitalize">
@@ -120,7 +130,7 @@ export default function HomePage() {
       ) : articles.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {articles.map((article) => (
-            <NewsCard key={article.url} article={article} />
+            article.url ? <NewsCard key={article.url} article={article} /> : null
           ))}
         </div>
       ) : (

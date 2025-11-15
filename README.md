@@ -1,5 +1,3 @@
-# Firebase Studio
+news app
+to view news and watch according to preference
 
-This is a NextJS starter in Firebase Studio.
-
-To get started, take a look at src/app/page.tsx.
